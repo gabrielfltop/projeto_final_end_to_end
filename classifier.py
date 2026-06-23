@@ -11,21 +11,15 @@ Responsável por:
 
 import pandas as pd
 import joblib
-from tqdm import tqdm
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
-from sklearn.metrics import (
-    classification_report,
-    accuracy_score, precision_score,
-    recall_score, f1_score,
-)
+from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score
 import os
 
 OUTPUT_DIR = "artifacts"
 LABEL_NAMES = {0: "No Fit", 1: "Potential Fit", 2: "Good Fit"}
+MODEL_PATH = os.path.join(OUTPUT_DIR, "mlp_best.pkl")
 
 # 1. CARREGAR E PREPARAR DADOS
 
@@ -69,25 +63,36 @@ def run_random_search(X_train, y_train, n_iter=10, cv=3):
     }
 
     random_search = RandomizedSearchCV(
-        estimator          = MLPClassifier(max_iter=1000),
-        param_distributions= param_dist,
-        n_iter             = n_iter,
-        cv                 = cv,
-        n_jobs             = -1,
-        verbose            = 2,
-        random_state       = 42,
+        estimator=MLPClassifier(max_iter=1000),
+        param_distributions=param_dist,
+        n_iter=n_iter,
+        cv=cv,
+        n_jobs=-1,
+        verbose=2,
+        random_state=42,
+        scoring="f1_macro"
     )
     random_search.fit(X_train, y_train)
 
     print(f"\n  ✅ Melhores parâmetros: {random_search.best_params_}")
     print(f"    ✅ Melhor score (CV):   {random_search.best_score_:.4f}")
-    return random_search.best_estimator_
+
+    return random_search
+
+def load_model():
+    if os.path.exists(MODEL_PATH):
+        print("[classifier] Carregando modelo...")
+
+        data = joblib.load(MODEL_PATH)
+        return data["model"], data["score"]
+    return None, -1
 
 # 3. AVALIAÇÃO FINAL
 
 def evaluate(model, X_test, y_test, label: str = "Modelo"):
     """Imprime o classification report completo do modelo."""
     print(f"\n[classifier] Avaliação final — {label}:")
+
     y_pred = model.predict(X_test)
     print(classification_report(
         y_test, y_pred,
@@ -96,13 +101,12 @@ def evaluate(model, X_test, y_test, label: str = "Modelo"):
 
 # 4. PIPELINE COMPLETA
 
-def run_classifier(n_iter=10, cv=3):
+def run_classifier(n_iter=10, cv=3, force_train=False, do_eval=False):
     """
     Executa o pipeline completo:
       1. Carrega dados
-      2. Roda baseline
-      3. Otimiza MLP
-      4. Avalia e salva o modelo final
+      2. Carrega ou cria o melhor modelo
+      3. Avalia o modelo final
 
     Retorna o melhor modelo treinado.
     """
@@ -113,20 +117,33 @@ def run_classifier(n_iter=10, cv=3):
     # 1. Dados
     X_train, X_test, y_train, y_test = load_data()
 
-    # 2. Random Search
-    best_model = run_random_search(X_train, y_train, n_iter=n_iter, cv=cv)
+    # 2. Tenta carregar modelo existente
+    best_model, best_score = load_model()
+
+    if not force_train and best_model is not None:
+        print("[classifier] Modelo existente carregado.")
+    else:
+        print("[classifier] Treinando novo modelo...")
+        search = run_random_search(X_train, y_train, n_iter=n_iter, cv=cv)
+        
+        candidate_model = search.best_estimator_
+        candidate_score = search.best_score_
+
+        if candidate_score > best_score:
+            print("[classifier] Novo modelo é melhor → salvando")
+            best_model = candidate_model
+            best_score = candidate_score
+            joblib.dump({"model": best_model, "score": best_score}, MODEL_PATH)
+        else:
+            print("[classifier] Modelo atual é melhor → descartando novo")
 
     # 3. Avaliação
-    evaluate(best_model, X_test, y_test, label="MLP otimizado")
-
-    # 4. Salvar
-    path = os.path.join(OUTPUT_DIR, "mlp_best.pkl")
-    joblib.dump(best_model, path)
-    print(f"\n✅ Modelo salvo em {path}")
+    if do_eval:
+        evaluate(best_model, X_test, y_test, label="MLP otimizado")
 
     return best_model
 
 # EXECUÇÃO DIRETA
 
 if __name__ == "__main__":
-    run_classifier(n_iter=25, cv=5)
+    run_classifier(n_iter=15, cv=5, force_train=True, do_eval=True)

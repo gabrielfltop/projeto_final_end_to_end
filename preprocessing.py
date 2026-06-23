@@ -89,11 +89,13 @@ def clean_text(text: str) -> str:
         return ""
 
     text = text.lower()
+    text = re.sub(r"^(summary|professional\s*summary|profile)\s*", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"http\S+|www\.\S+",          " ", text)   # URLs
     text = re.sub(r"\S+@\S+",                   " ", text)   # emails
     text = re.sub(r"\+?\d[\d\s\-().]{7,}\d",    " ", text)   # telefones
     text = re.sub(r"[^a-z0-9\s]",               " ", text)   # especiais
-    text = re.sub(r"\s+",                        " ", text)   # espaços múltiplos
+    text = re.sub(r"\s+",                       " ", text)   # espaços múltiplos
     return text.strip()
 
 
