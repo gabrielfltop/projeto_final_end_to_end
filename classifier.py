@@ -1,8 +1,8 @@
 """
 JobMatch AI - Classifier
 ============================
-Treina e avalia um MLP para classificar o fit candidato/vaga em 3 classes:
-  0 → No Fit | 1 → Potential Fit | 2 → Good Fit
+Treina e avalia um MLP para classificar o fit candidato/vaga em 2 classes:
+  0 → No Fit | 1 → Fit
 
 A entrada do modelo é o TF-IDF da concatenação (JD + currículo), capturando
 a relação semântica entre os dois textos.
@@ -21,7 +21,7 @@ from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.neural_network import MLPClassifier
 
 OUTPUT_DIR  = "artifacts"
-LABEL_NAMES = {0: "No Fit", 1: "Potential Fit", 2: "Good Fit"}
+LABEL_NAMES = {0: "No Fit", 1: "Fit"}
 MODEL_PATH  = os.path.join(OUTPUT_DIR, "mlp_best.pkl")
 
 
@@ -55,7 +55,7 @@ def load_data():
 
 def run_random_search(X_train, y_train, n_iter: int = 10, cv: int = 3):
     """
-    Otimiza hiperparâmetros do MLP com RandomizedSearchCV (métrica: F1 macro).
+    Otimiza hiperparâmetros do MLP com RandomizedSearchCV (métrica: F1).
     Retorna o objeto RandomizedSearchCV fittado.
     """
     print(f"\n[classifier] RandomizedSearchCV (n_iter={n_iter}, cv={cv})...")
@@ -75,7 +75,7 @@ def run_random_search(X_train, y_train, n_iter: int = 10, cv: int = 3):
         n_jobs             = -1,
         verbose            = 2,
         random_state       = 42,
-        scoring            = "f1_macro",
+        scoring            = "f1",
     )
     search.fit(X_train, y_train)
 
@@ -102,14 +102,13 @@ def load_model():
 # ── 4. AVALIAÇÃO ─────────────────────────────────────────────────────────────────
 
 def evaluate(model, X_test, y_test, label: str = "Modelo"):
-    """Imprime o classification report completo (precision, recall, F1 por classe)."""
+    """Imprime o classification report completo (precision, recall, F1)."""
     print(f"\n[classifier] Avaliação — {label}:")
     y_pred = model.predict(X_test)
     print(classification_report(
         y_test, y_pred,
         target_names=[LABEL_NAMES[i] for i in sorted(LABEL_NAMES)],
     ))
-
 
 # ── 5. PIPELINE COMPLETA ─────────────────────────────────────────────────────────
 
@@ -118,7 +117,7 @@ def run_classifier(n_iter: int = 10, cv: int = 3, force_train: bool = False, do_
     Pipeline completa de treino:
       1. Carrega dados
       2. Carrega modelo existente ou treina novo via RandomizedSearchCV
-      3. Salva apenas se o novo modelo superar o anterior (F1 macro)
+      3. Salva apenas se o novo modelo superar o anterior (F1)
       4. Avalia no conjunto de teste (se do_eval=True)
 
     Retorna o melhor modelo disponível.
@@ -151,8 +150,7 @@ def run_classifier(n_iter: int = 10, cv: int = 3, force_train: bool = False, do_
 
     return best_model
 
-
 # ── EXECUÇÃO DIRETA ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    run_classifier(n_iter=5, cv=5, force_train=True, do_eval=True)
+    run_classifier(n_iter=10, cv=3, force_train=False, do_eval=True)

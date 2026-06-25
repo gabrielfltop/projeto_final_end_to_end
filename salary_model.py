@@ -88,6 +88,7 @@ def load_model():
     Chamada pelo app em runtime — não re-treina.
     """
     if os.path.exists(MODEL_PATH):
+        print("[salary_model] Carregando modelo...")
         data = joblib.load(MODEL_PATH)
         return data["model"], data["rmse"], data["encoder"]
     return None, float("inf"), None

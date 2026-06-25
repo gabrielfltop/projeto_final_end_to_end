@@ -52,12 +52,10 @@ pip install -r requirements.txt
 ### 2. Rodar o pipeline completo (primeira vez)
 
 ```bash
-python main.py          # download dos datasets
-python preprocessing.py # limpeza e vetorização
-python classifier.py    # treina o classificador
-python recommender.py   # gera a matriz de vagas
-python salary_model.py  # treina o modelo de salário
+python main.py
 ```
+
+Esse único comando baixa os datasets, processa os dados, treina todos os modelos e salva os artefatos em `artifacts/`.
 
 ### 3. Iniciar o app
 

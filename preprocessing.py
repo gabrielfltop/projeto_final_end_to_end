@@ -4,7 +4,7 @@ JobMatch AI - Preprocessing
 Responsável por:
   1. Parsear o dataset Resume-JD-Match (separar JD e currículo do texto único)
   2. Limpar e normalizar textos (JD, currículo, vagas LinkedIn)
-  3. Encodar labels (No Fit / Potential Fit / Good Fit)
+  3. Encodar labels (Fit / No Fit)
   4. Vetorizar textos com TF-IDF
   5. Preparar os datasets LinkedIn e Job Skill Set para uso nos modelos
 """
@@ -62,7 +62,7 @@ def load_match_dataset(df_match: pd.DataFrame) -> pd.DataFrame:
     mask     = (df_match["jd_text"] != "") & (df_match["resume_text"] != "")
     df_match = df_match[mask].reset_index(drop=True)
 
-    label_map = {"No Fit": 0, "Potential Fit": 1, "Good Fit": 2}
+    label_map = {"No Fit": 0, "Potential Fit": 1, "Good Fit": 1}
     df_match["label_encoded"] = df_match["label"].map(label_map)
 
     print(f"  ✅ {len(df_match):,} pares válidos | Distribuição:")

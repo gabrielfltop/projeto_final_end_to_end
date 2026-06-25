@@ -23,8 +23,8 @@ from skills_analyzer import split_skills, _search_by_title, _extract_from_descri
 
 # ── Constantes ──────────────────────────────────────────────────────────────────
 OUTPUT_DIR  = "artifacts"
-LABEL_NAMES = {0: "🔴 No Fit", 1: "🟡 Potential Fit", 2: "🟢 Good Fit"}
-LABEL_COLOR = {0: "#ef4444",   1: "#f59e0b",           2: "#22c55e"}
+LABEL_NAMES = {0: "🔴 No Fit", 1: "🟢 Good Fit"}
+LABEL_COLOR = {0: "#ef4444", 1: "#22c55e"}
 
 # ── Configuração da página ───────────────────────────────────────────────────────
 st.set_page_config(
@@ -40,7 +40,7 @@ st.markdown("""
   .stApp { background-color: #0d0d0d; color: #e5e5e5; }
 
   .hero-title {
-    font-size: 3rem; font-weight: 800;
+    font-size: 3rem !important; font-weight: 800;
     color: #39ff14; letter-spacing: -1px; margin-bottom: 0;
   }
   .hero-sub { font-size: 1.1rem; color: #9ca3af; margin-top: 4px; margin-bottom: 2rem; }
@@ -111,8 +111,9 @@ def load_all_models():
 @st.cache_resource(show_spinner=False)
 def load_skills_data():
     """
-    Carrega o skills_clean.csv e monta o lookup {job_id: set(skills)}.
+    Carrega o skills_clean.csv e monta o lookup {job_title_lower: set(skills)}.
     Usa a coluna 'skills_list' (formato de lista Python) para montar os sets.
+    O dataset Job Skill Set não possui job_id, então o lookup é feito por título.
     Cacheado separadamente dos modelos para evitar recarregamentos desnecessários.
     """
     skills_path = os.path.join(OUTPUT_DIR, "skills_clean.csv")
@@ -128,7 +129,9 @@ def load_skills_data():
             skills_set = set(ast.literal_eval(raw)) if isinstance(raw, str) else set()
         except Exception:
             skills_set = set()
-        lookup[row["job_id"]] = skills_set
+        title_key = str(row.get("job_title", "")).strip().lower()
+        if title_key:
+            lookup[title_key] = skills_set
 
     return lookup, df_skills
 
@@ -190,15 +193,16 @@ def _build_skills_block(job_skills: set, resume_clean: str, source: str = "") ->
 def _resolve_skills(job_id, title, description, skills_lookup, df_skills):
     """
     Obtém as skills de uma vaga usando cascata de 3 estratégias:
-      1. Lookup direto por job_id  → mais preciso, usa dados do dataset
-      2. Busca por título similar  → cobre vagas fora do overlap de IDs
-      3. Extração da descrição     → fallback heurístico via regex
+      1. Lookup direto por título exato  → mais preciso, usa dados do dataset
+      2. Busca por título similar        → cobre variações de título
+      3. Extração da descrição           → fallback heurístico via regex
 
     Retorna (set_de_skills, fonte) onde fonte é uma string descritiva.
     """
-    # Estratégia 1: lookup direto por job_id (IDs em comum entre os datasets)
-    if job_id in skills_lookup and skills_lookup[job_id]:
-        return skills_lookup[job_id], "dataset"
+    # Estratégia 1: lookup direto pelo título normalizado
+    title_key = str(title).strip().lower()
+    if title_key and title_key in skills_lookup and skills_lookup[title_key]:
+        return skills_lookup[title_key], "dataset"
 
     # Estratégia 2: busca por palavras do título no skills_clean.csv
     if df_skills is not None:
@@ -227,7 +231,7 @@ col_input, _ = st.columns([2, 1])
 with col_input:
     resume_input = st.text_area(
         "**Seu currículo / perfil profissional**",
-        height=260,
+        height=150,
         placeholder=(
             "Ex: Engenheiro de Software com 5 anos de experiência em Python, "
             "machine learning, APIs REST, AWS e liderança de times ágeis..."
@@ -235,7 +239,7 @@ with col_input:
     )
     job_input = st.text_area(
         "**A vaga que você quer descobrir fit** (opcional)",
-        height=200,
+        height=150,
     )
     run_btn = st.button("Analisar perfil →")
 

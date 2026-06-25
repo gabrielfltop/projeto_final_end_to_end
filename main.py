@@ -7,10 +7,11 @@ processar e treinar todos os modelos.
 
 Ordem de execução:
   1. Download dos 3 datasets (Kaggle + HuggingFace)
-  2. Preprocessing (limpeza, TF-IDF, geração dos CSVs em artifacts/)
-  3. Classifier (MLP Fit/No Fit)
-  4. Recommender (matriz TF-IDF das vagas)
-  5. Salary Model (Ridge de estimativa salarial)
+  2. Carregamento dos datasets em DataFrames
+  3. Preprocessing (limpeza, TF-IDF, geração dos CSVs em artifacts/)
+  4. Classifier (MLP Fit/No Fit)
+  5. Recommender (matriz TF-IDF das vagas)
+  6. Salary Model (Ridge de estimativa salarial)
 
 Após rodar este script, inicie o app com:
   streamlit run app.py
@@ -78,7 +79,7 @@ df_match_clean, df_postings_clean, df_skills_clean, _, _ = run_preprocessing(
 
 # ── 4. CLASSIFIER ────────────────────────────────────────────────────────────────
 
-run_classifier(n_iter=10, cv=3, force_train=False, do_eval=True)
+run_classifier(n_iter=10, cv=3, force_train=True, do_eval=True)
 
 # ── 5. RECOMMENDER ───────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ create_jobs_matrix()
 
 # ── 6. SALARY MODEL ──────────────────────────────────────────────────────────────
 
-run_salary_model(force_train=False, do_eval=True)
+run_salary_model(force_train=True, do_eval=True)
 
 # ── CONCLUSÃO ────────────────────────────────────────────────────────────────────
 
